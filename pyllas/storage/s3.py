@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import io
+import os
+import time
 import gzip
 import boto3
 import pandas as pd
-from pyarrow import orc, concat_tables
 from typing import Generator
+from functools import partial
+from multiprocessing import Pool
+from pyarrow import orc, concat_tables
 
 from pyllas.storage.paths import S3Path
 from pyllas.utils import logger
@@ -52,26 +56,28 @@ class S3Client:
         """
         self.list_objects(path, lazy=True).delete()
 
-    def read_orc(self, path: S3Path, *, gzipped=False, progress: ProgressBar = None) -> pd.DataFrame:
+    def read_orc(self, path: S3Path, *, n_jobs: int = -1, gzipped=False, progress: ProgressBar = None) -> pd.DataFrame:
         """Reads orc object(s) from S3 and returns result as a pyarrow.Table.
         Takes arguments:
           - path: path to the object(s) in S3.
           - gzipped: if True, decompresses data with gzip. Default: False.
         """
 
-        def load_orc(object_path: S3Path):
-            data = self.read_object(object_path, gzipped=gzipped)
-            with io.BytesIO(data) as buffer:
-                table = orc.ORCFile(buffer).read()
-                if progress:
-                    progress.tick()
+        with Pool(processes=os.cpu_count() if n_jobs == -1 else n_jobs) as pool:
+            feature = pool.map_async(
+                partial(S3Client._load_orc_table, gzipped=gzipped),
+                self.list_paths(path)
+            )
+            while progress and not feature.ready():
+                progress.tick()
+                time.sleep(5)
 
-                return table
+            tables = feature.get()
 
-        tables = list(map(load_orc, self.list_paths(path)))
+        return concat_tables(tables).to_pandas() if tables else pd.DataFrame()
 
-        if tables:
-            concat_tables(tables)
-            return tables[0].to_pandas()
-        else:
-            return pd.DataFrame()
+    @staticmethod
+    def _load_orc_table(object_path: S3Path, *, gzipped=False) -> orc.Table:
+        data = S3Client().read_object(object_path, gzipped=gzipped)
+        with io.BytesIO(data) as buffer:
+            return orc.ORCFile(buffer).read()
