@@ -8,7 +8,7 @@ def readme():
 
 setup(
     name='pyllas',
-    version='0.1.0',
+    version='0.2.0',
     author='wristylotus',
     author_email='wristylotus@gmail.com',
     description='Client for AWS Athena',
