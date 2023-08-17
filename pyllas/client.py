@@ -20,7 +20,9 @@ class Athena:
 
         :param workgroup: name of the workgroup to execute queries
         :param s3_output_location: S3 path to store query results
-        :param n_jobs: number of parallel jobs to read query results
+        :param n_jobs: number of parallel jobs to read query results, default: 1.
+               n_jobs=1, then use only main-threaded
+               n_jobs=-1, then use all available CPUs
         :param debug: enable logging debug level
     """
 
@@ -28,7 +30,7 @@ class Athena:
             self,
             workgroup: str,
             s3_output_location: str,
-            n_jobs: int = -1,
+            n_jobs: int = 1,
             debug: bool = False,
     ):
         self._logger = logger.get_logger(name='pyllas.Athena', log_level='DEBUG' if debug else 'INFO')

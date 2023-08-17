@@ -1,3 +1,4 @@
+import pyllas
 from setuptools import setup, find_packages
 
 
@@ -8,7 +9,7 @@ def readme():
 
 setup(
     name='pyllas',
-    version='0.2.0',
+    version=pyllas.__version__,
     author='wristylotus',
     author_email='wristylotus@gmail.com',
     description='Client for AWS Athena',

@@ -1,7 +1,7 @@
 from pyllas.client import Athena
 from pyllas import sql
 
-__version__ = "0.1.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "Athena",

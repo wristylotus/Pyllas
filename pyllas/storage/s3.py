@@ -56,23 +56,35 @@ class S3Client:
         """
         self.list_objects(path, lazy=True).delete()
 
-    def read_orc(self, path: S3Path, *, n_jobs: int = -1, gzipped=False, progress: ProgressBar = None) -> pd.DataFrame:
+    def read_orc(self, path: S3Path, *, n_jobs: int = 1, gzipped=False, progress: ProgressBar = None) -> pd.DataFrame:
         """Reads orc object(s) from S3 and returns result as a pyarrow.Table.
         Takes arguments:
           - path: path to the object(s) in S3.
           - gzipped: if True, decompresses data with gzip. Default: False.
         """
 
-        with Pool(processes=os.cpu_count() if n_jobs == -1 else n_jobs) as pool:
-            feature = pool.map_async(
-                partial(S3Client._load_orc_table, gzipped=gzipped),
-                self.list_paths(path)
-            )
-            while progress and not feature.ready():
-                progress.tick()
-                time.sleep(5)
+        def run_concurrently(processes: int) -> list[orc.Table]:
+            self._logger.info(f'Mode: multiprocessing ({processes})')
+            with Pool(processes) as pool:
+                feature = pool.map_async(
+                    partial(S3Client._load_orc_table, gzipped=gzipped),
+                    self.list_paths(path)
+                )
+                while progress and not feature.ready():
+                    progress.tick()
+                    time.sleep(5)
 
-            tables = feature.get()
+                return feature.get()
+
+        def run_sequentially() -> list[orc.Table]:
+            self._logger.info('Mode: sequential')
+            for p in self.list_paths(path):
+                yield S3Client._load_orc_table(p, gzipped=gzipped)
+                progress.tick()
+
+        tables = run_sequentially() \
+            if n_jobs == 1 \
+            else run_concurrently(processes=os.cpu_count() if n_jobs == -1 else n_jobs)
 
         return concat_tables(tables).to_pandas() if tables else pd.DataFrame()
 
