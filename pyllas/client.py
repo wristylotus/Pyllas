@@ -20,6 +20,7 @@ class Athena:
 
         :param workgroup: name of the workgroup to execute queries
         :param s3_output_location: S3 path to store query results
+        :param n_jobs: number of parallel jobs to read query results
         :param debug: enable logging debug level
     """
 
@@ -27,6 +28,7 @@ class Athena:
             self,
             workgroup: str,
             s3_output_location: str,
+            n_jobs: int = -1,
             debug: bool = False,
     ):
         self._logger = logger.get_logger(name='pyllas.Athena', log_level='DEBUG' if debug else 'INFO')
@@ -35,6 +37,7 @@ class Athena:
 
         self.workgroup = workgroup
         self.s3_output_location = S3Path(s3_output_location)
+        self.n_jobs = n_jobs
 
     def query(self, query: str | Path,
               *,
@@ -59,13 +62,16 @@ class Athena:
         query_name = self.create_table(query=query, params=params, ask_status_sec=ask_status_sec)
         query_path = self.s3_output_location / query_name
 
-        self._logger.info('Load and transform query results.')
+        self._logger.info('Load query results.')
+        begin_time = time.time()
         with ProgressBar() as progress:
-            dataframe = self._s3.read_orc(query_path, progress=progress)
+            dataframe = self._s3.read_orc(query_path, n_jobs=self.n_jobs, progress=progress)
 
         for date_field in date_fields:
             if date_field in dataframe:
                 dataframe[date_field] = pd.to_datetime(dataframe[date_field])
+
+        self._logger.info(f'Load query results time: {round(time.time() - begin_time)} sec')
 
         return dataframe
 
