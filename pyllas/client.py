@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import sys
 import uuid
 import time
 import boto3
 import pandas as pd
 from pathlib import Path
+from botocore.paginate import PageIterator
 
 from pyllas.sql import infuse, load_query
 from pyllas.utils import logger
@@ -137,9 +139,13 @@ class Athena:
         return query_name
 
     def execute_statement(self, query: str | Path, *, database: str,
-                          params: dict = None, ask_status_sec: int = 5) -> None:
+                          params: dict = None, batch_size: int = 1000, ask_status_sec: int = 5) -> PageIterator:
         """
-        Execute queries that don't select data. Such as `CREATE TABLE`, `DROP TABLE` etc.
+        For all queries except SELECT. Such as `CREATE TABLE`, `DROP TABLE` etc.
+        Returns PageIterator of dictionaries with query results.
+        Example:
+        >> athena.execute_statement("SHOW TABLES IN test_db", database='test_db')
+        {'ResultSet': {'Rows': [{'Data': [{'VarCharValue': 'test_table'}]}], 'ResultSetMetadata': {'ColumnInfo': [{'CatalogName': 'hive', ...}]}}}
 
         Parameters
         ----------
@@ -149,6 +155,8 @@ class Athena:
             database name
         :param params: dict
             parameters to infuse :param query, see :func: pyllas.sql.infuse
+        :param batch_size: int
+            batch size to read query results. Default: 1000
         :param ask_status_sec: int
             interval in seconds to check query status. Default: 5
         """
@@ -163,6 +171,14 @@ class Athena:
         )['QueryExecutionId']
 
         self.__wait_query_complete(query_id, ask_status_sec)
+
+        return self._athena.get_paginator('get_query_results').paginate(
+            QueryExecutionId=query_id,
+            PaginationConfig={
+                'MaxItems': sys.maxsize,
+                'PageSize': batch_size
+            }
+        )
 
     def cancel_query(self, query_id: str) -> None:
         """
