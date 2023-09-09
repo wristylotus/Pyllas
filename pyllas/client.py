@@ -79,7 +79,7 @@ class Athena:
 
         return dataframe
 
-    def create_table(self, *, query: str, params: dict = None,
+    def create_table(self, *, query: Path | str, params: dict = None,
                      prefix: str = 'tmp_', name: str = None,
                      overwrite: bool = False, ask_status_sec: int = 5) -> str:
         """
@@ -138,7 +138,7 @@ class Athena:
 
         return query_name
 
-    def execute_statement(self, query: str | Path, *, database: str,
+    def execute_statement(self, query: str | Path, *, database: str = None,
                           params: dict = None, batch_size: int = 1000, ask_status_sec: int = 5) -> PageIterator:
         """
         For all queries except SELECT. Such as `CREATE TABLE`, `DROP TABLE` etc.
@@ -160,6 +160,7 @@ class Athena:
         :param ask_status_sec: int
             interval in seconds to check query status. Default: 5
         """
+        database = database or self.workgroup
         query = load_query(query, params) if type(query) is Path else infuse(query, params)
 
         query_id = self._athena.start_query_execution(

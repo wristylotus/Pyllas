@@ -8,7 +8,7 @@ import boto3
 import pandas as pd
 from typing import Generator
 from functools import partial
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 from pyarrow import orc, concat_tables
 
 from pyllas.storage.paths import S3Path
@@ -63,9 +63,9 @@ class S3Client:
           - gzipped: if True, decompresses data with gzip. Default: False.
         """
 
-        def run_concurrently(processes: int) -> list[orc.Table]:
-            self._logger.info(f'Mode: multiprocessing ({processes})')
-            with Pool(processes) as pool:
+        def run_concurrently(threads: int) -> list[orc.Table]:
+            self._logger.info(f'Mode: multithreading ({threads})')
+            with ThreadPool(threads) as pool:
                 feature = pool.map_async(
                     partial(S3Client._load_orc_table, gzipped=gzipped),
                     self.list_paths(path)
@@ -84,7 +84,7 @@ class S3Client:
 
         tables = run_sequentially() \
             if n_jobs == 1 \
-            else run_concurrently(processes=os.cpu_count() if n_jobs == -1 else n_jobs)
+            else run_concurrently(threads=os.cpu_count() if n_jobs == -1 else n_jobs)
 
         return concat_tables(tables).to_pandas() if tables else pd.DataFrame()
 
