@@ -29,29 +29,29 @@ def infuse(string: str, params: dict) -> str:
 
     result = string
     for key, value in params.items():
-        replace_value = value
+        new_value = value
 
         if type(value) is list:
-            replace_value = ','.join([f"'{val}'" for val in value])
+            new_value = ','.join([f"'{val}'" for val in value])
         elif type(value) is str:
-            replace_value = f"'{value}'"
+            new_value = f"'{value}'"
 
         result = result.replace(
             '${%s}' % key,
-            str(replace_value)
+            str(new_value)
         )
 
     return result
 
 
 def load_query(path: Path, params: dict = None) -> str:
-    """Load query from resources folder and replace params in it."""
+    """Load a query from the resources folder and replace params in it."""
     with path.open() as query:
         return infuse(query.read(), params)
 
 
 class Expr:
-    """Wrap string with this class to prevent infuse from adding quotes around the value."""
+    """Wrap string in this class prevent `infuse` function from adding quotes around the value."""
 
     def __init__(self, content: str):
         self.content = content
@@ -61,3 +61,8 @@ class Expr:
     def __str__(self): return self.content
 
     def __repr__(self): return self.content
+
+
+Table = Expr
+Database = Expr
+Schema = Expr

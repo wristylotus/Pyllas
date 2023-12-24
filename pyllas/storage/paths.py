@@ -33,13 +33,13 @@ class Path:
         return Path(func(self.as_str()))
 
     def drop_tail_slash(self) -> Path:
-        return self.map(lambda path: path.removesuffix('/'))
+        return self.map(lambda path: self.__remove_suffix(path, '/'))
 
     def as_str(self) -> str:
         parts = deepcopy(self.parts)
         if len(parts) > 1:
-            first = parts.pop(0).removesuffix('/')
-            last = parts.pop().removeprefix('/')
+            first = self.__remove_suffix(parts.pop(0), '/')
+            last = self.__remove_prefix(parts.pop(), '/')
 
             parts = (part.strip('/') for part in parts)
             parts = list(filter(lambda part: len(part) > 0, parts))
@@ -75,6 +75,14 @@ class Path:
 
     def __repr__(self) -> str:
         return f"Path('{self.as_str()}')"
+
+    @staticmethod
+    def __remove_prefix(line: str, prefix: str) -> str:
+        return line[1:] if line.endswith(prefix) else line
+
+    @staticmethod
+    def __remove_suffix(line: str, suffix: str) -> str:
+        return line[:-1] if line.endswith(suffix) else line
 
 
 class S3Path:

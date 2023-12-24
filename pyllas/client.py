@@ -53,12 +53,12 @@ class Athena:
 
         Parameters
         ----------
-        :param query: str or Path
+        :param query: str or pathlib.Path
             query string or sql file path to read
         :param params: dict
             parameters to infuse :param query, see :func: pyllas.sql.infuse
         :param date_fields: tuple or list
-               fields names to convert to pandas.datetime. Default: ('date', 'event_date', 'report_date')
+               field names to convert to pandas.datetime. Default: ('date', 'event_date', 'report_date')
         :param ask_status_sec: int
                interval in seconds to check query status. Default: 5
         """
@@ -83,20 +83,20 @@ class Athena:
                      prefix: str = 'tmp_', name: str = None,
                      overwrite: bool = False, ask_status_sec: int = 5) -> str:
         """
-        Create table with query results.
+        Create a table with query results and return it name.
 
         Parameters
         ----------
-        :param query: str or Path
+        :param query: str or pathlib.Path
             query string or sql file path to read
         :param params: dict
             parameters to infuse :param query, see :func: pyllas.sql.infuse
         :param name: str
-            name for the table. Default: auto-generated name
+            name for the table. Default: auto-generated random name
         :param prefix: str
             prefix for the auto-generated table name, used if :param name is None. Default: `tmp_`
         :param overwrite: bool
-            overwrite table if exists. Default: False
+            overwrite table if it exists. Default: False
         :param ask_status_sec: int
             interval in seconds to check query status. Default: 5
         """
@@ -149,7 +149,7 @@ class Athena:
 
         Parameters
         ----------
-        :param query: str or Path
+        :param query: str or pathlib.Path
             query string or sql file path to read
         :param database: str
             database name

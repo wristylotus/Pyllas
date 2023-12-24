@@ -82,7 +82,7 @@ class S3Client:
                 yield S3Client._load_orc_table(p, gzipped=gzipped)
                 progress.tick()
 
-        tables = run_sequentially() \
+        tables = list(run_sequentially()) \
             if n_jobs == 1 \
             else run_concurrently(threads=os.cpu_count() if n_jobs == -1 else n_jobs)
 
